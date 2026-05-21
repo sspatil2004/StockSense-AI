@@ -17,7 +17,9 @@ def index():
 @app.route("/api/predict", methods=["POST"])
 def api_predict():
     data = request.get_json(force=True)
-    ticker = data.get("ticker", "AAPL").strip().upper()
+    
+    # Strip spaces to prevent "tata motors" spacing errors
+    ticker = data.get("ticker", "AAPL").strip().upper().replace(" ", "")
     days = int(data.get("days", 7))
     model = data.get("model", "random_forest")
     
@@ -41,15 +43,20 @@ def api_predict():
         # Initialize ticker object using clean formatted string for financial extraction
         ticker_obj = yf.Ticker(ticker_clean)
         
-        # --- FETCH HIGH, LOW, AND MARKET CAP ---
+        # --- 100% RELIABLE HIGH/LOW FETCH (From our own dataframe to avoid Yahoo blocks) ---
+        try:
+            day_high = round(float(hist["High"].iloc[-1]), 2)
+            day_low = round(float(hist["Low"].iloc[-1]), 2)
+        except Exception:
+            day_high, day_low = 'N/A', 'N/A'
+
+        # --- FETCH MARKET CAP SEPARATELY ---
         try:
             ticker_info = ticker_obj.info
-            day_high = ticker_info.get('dayHigh', 'N/A')
-            day_low = ticker_info.get('dayLow', 'N/A')
             raw_market_cap = ticker_info.get('marketCap', 0)
             market_cap_cr = round(raw_market_cap / 10000000, 2) if raw_market_cap else 'N/A'
         except Exception:
-            day_high, day_low, market_cap_cr = 'N/A', 'N/A', 'N/A'
+            market_cap_cr = 'N/A'
 
         # --- FETCH QUARTERLY REVENUE STATEMENTS ---
         revenue_labels = []
