@@ -50,13 +50,19 @@ def api_predict():
         except Exception:
             day_high, day_low = 'N/A', 'N/A'
 
-        # --- FETCH MARKET CAP SEPARATELY ---
+        # --- FETCH MARKET CAP SEPARATELY (Using lightweight fast_info for cloud servers) ---
         try:
-            ticker_info = ticker_obj.info
-            raw_market_cap = ticker_info.get('marketCap', 0)
+            # fast_info bypasses the heavy rate limits that block .info on Render
+            raw_market_cap = ticker_obj.fast_info['marketCap']
             market_cap_cr = round(raw_market_cap / 10000000, 2) if raw_market_cap else 'N/A'
         except Exception:
-            market_cap_cr = 'N/A'
+            try:
+                # Backup attempt just in case
+                ticker_info = ticker_obj.info
+                raw_market_cap = ticker_info.get('marketCap', 0)
+                market_cap_cr = round(raw_market_cap / 10000000, 2) if raw_market_cap else 'N/A'
+            except Exception:
+                market_cap_cr = 'N/A'
 
         # --- FETCH QUARTERLY REVENUE STATEMENTS ---
         revenue_labels = []
